@@ -8,8 +8,8 @@ const HeroSection = () => {
   const [displayedText, setDisplayedText] = useState("");
   const [showCursor, setShowCursor] = useState(true);
   const [isTypingComplete, setIsTypingComplete] = useState(false);
-  const fullText = "Hire Talent Across Borders. Pay Locally.";
-  const firstLine = "Hire Talent Across Borders.";
+  const fullText = "Hire Anywhere. Pay Locally.";
+  const firstLine = "Hire Anywhere.";
 
   useEffect(() => {
     let index = 0;
@@ -79,7 +79,7 @@ const HeroSection = () => {
             )}
           </h1>
           <p className="max-w-2xl text-lg md:text-xl text-primary-foreground/80 mb-10 leading-relaxed">
-            KaziBridge helps businesses hire skilled freelancers across East Africa and pay across borders while freelancers receive their earnings locally.
+            KaziBridge connects global businesses with African talent and helps freelancers receive their earnings locally.
           </p>
 
           {/* AI Input */}
