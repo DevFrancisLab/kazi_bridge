@@ -1,18 +1,18 @@
 const steps = [
   {
     number: "01",
-    title: "Post Your Job",
-    description: "Describe what you need and set your budget. It only takes a minute.",
+    title: "Post a Job",
+    description: "Describe what you need and set your budget.",
   },
   {
     number: "02",
-    title: "Receive Bids or AI Matches",
-    description: "Get proposals from freelancers or let our AI find the perfect match.",
+    title: "Hire Talent",
+    description: "Receive bids or let AI match you with the right freelancer.",
   },
   {
     number: "03",
-    title: "Pay Securely & Get Work Done",
-    description: "Funds are held in escrow and released when you approve the deliverables.",
+    title: "Pay & Get It Done",
+    description: "Pay through KaziBridge while your freelancer receives their earnings locally.",
   },
 ];
 

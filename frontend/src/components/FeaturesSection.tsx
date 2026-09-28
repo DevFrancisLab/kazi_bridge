@@ -1,29 +1,29 @@
-import { Briefcase, ShieldCheck, Brain, Zap } from "lucide-react";
+import { Briefcase, ShieldCheck, Wallet, Zap } from "lucide-react";
 
 const features = [
-  {
-    icon: Briefcase,
-    title: "Post Jobs & Receive Bids",
-    description:
-      "Create detailed job listings and receive competitive bids from qualified freelancers within minutes.",
-  },
-  {
-    icon: ShieldCheck,
-    title: "Secure Payments",
-    description:
-      "Pay with M-Pesa, crypto, or traditional methods — all protected by escrow until work is approved.",
-  },
-  {
-    icon: Brain,
-    title: "Smart Task Priority & Burnout Alerts",
-    description:
-      "AI monitors workload patterns and flags burnout risks so your team stays productive and healthy.",
-  },
   {
     icon: Zap,
     title: "AI-Powered Matching",
     description:
-      "Our intelligent matching engine connects you with freelancers whose skills perfectly fit your project.",
+      "Find freelancers whose skills match your project and get the right talent faster.",
+  },
+  {
+    icon: ShieldCheck,
+    title: "Cross-Border Payments",
+    description:
+      "Pay freelancers across East Africa without managing separate payment processes for each country.",
+  },
+  {
+    icon: Wallet,
+    title: "Local Freelancer Payouts",
+    description:
+      "Freelancers receive their earnings through local payment methods in their country.",
+  },
+  {
+    icon: Briefcase,
+    title: "Jobs & Bids",
+    description:
+      "Post projects, receive bids, and manage your work from one place.",
   },
 ];
 

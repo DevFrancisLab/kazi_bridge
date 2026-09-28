@@ -8,7 +8,8 @@ const HeroSection = () => {
   const [displayedText, setDisplayedText] = useState("");
   const [showCursor, setShowCursor] = useState(true);
   const [isTypingComplete, setIsTypingComplete] = useState(false);
-  const fullText = "Hire Top Freelancers, Faster";
+  const fullText = "Hire Talent Across Borders. Pay Locally.";
+  const firstLine = "Hire Talent Across Borders.";
 
   useEffect(() => {
     let index = 0;
@@ -62,14 +63,23 @@ const HeroSection = () => {
       <div className="absolute inset-0 bg-foreground/20" />
 
       <div className="relative z-10 container mx-auto px-6 md:px-12 lg:px-16">
-        <div className="max-w-xl animate-fade-up">
-          <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold leading-tight text-primary-foreground mb-6">
-            {displayedText}
-            <span className={`inline-block w-1 h-12 bg-primary-foreground ml-1 ${showCursor ? 'opacity-100' : 'opacity-0'} transition-opacity duration-100`}></span>
+        <div className="max-w-3xl animate-fade-up">
+          <h1 className="text-4xl md:text-5xl font-bold leading-tight text-primary-foreground mb-6">
+            <span className="block">
+              {displayedText.slice(0, firstLine.length)}
+              {displayedText.length <= firstLine.length && (
+                <span className={`inline-block w-1 h-10 md:h-12 bg-primary-foreground ml-1 align-middle ${showCursor ? "opacity-100" : "opacity-0"} transition-opacity duration-100`} />
+              )}
+            </span>
+            {displayedText.length > firstLine.length && (
+              <span className="block">
+                {displayedText.slice(firstLine.length + 1)}
+                <span className={`inline-block w-1 h-10 md:h-12 bg-primary-foreground ml-1 align-middle ${showCursor ? "opacity-100" : "opacity-0"} transition-opacity duration-100`} />
+              </span>
+            )}
           </h1>
-          <p className="text-lg md:text-xl text-primary-foreground/80 mb-10 leading-relaxed">
-            Tell us your needs and our AI agent will connect you with the right
-            talent instantly.
+          <p className="max-w-2xl text-lg md:text-xl text-primary-foreground/80 mb-10 leading-relaxed">
+            KaziBridge helps businesses hire skilled freelancers across East Africa and pay across borders while freelancers receive their earnings locally.
           </p>
 
           {/* AI Input */}
