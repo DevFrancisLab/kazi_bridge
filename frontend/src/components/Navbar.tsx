@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
+import BrandLogo from "@/components/BrandLogo";
 
 const navLinks = ["Features", "How It Works", "Pricing", "Contact"];
 
@@ -23,9 +24,11 @@ const Navbar = () => {
       }`}
     >
       <div className="container mx-auto flex items-center justify-between py-4 px-6">
-        <a href="#" className={`text-xl font-bold tracking-tight transition-colors ${scrolled ? "text-foreground" : "text-primary-foreground"}`}>
-          KaziBridge
-        </a>
+        <BrandLogo
+          to="/"
+          size="sm"
+          wordmarkClassName={scrolled ? "text-foreground" : "text-primary-foreground"}
+        />
 
         <div className="hidden md:flex items-center gap-8">
           {navLinks.map((link) => (

@@ -1,5 +1,6 @@
 import { NavLink, useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
+import BrandLogo from "@/components/BrandLogo";
 import {
   Home,
   Briefcase,
@@ -60,9 +61,8 @@ const Sidebar = () => {
   console.log("  selected menu:", role === 'FREELANCER' ? 'freelancerMenu' : 'clientMenu');
   return (
     <aside className="fixed left-0 top-0 z-40 h-screen w-[250px] border-r border-gray-200 bg-white px-4 py-6 shadow-sm">
-      <div className="mb-8 flex items-center gap-2 border-b border-gray-100 pb-5">
-        <div className="h-9 w-9 rounded-md bg-gradient-to-br from-blue-600 to-cyan-500" />
-        <h1 className="text-xl font-extrabold tracking-tight text-slate-900">KaziBridge</h1>
+      <div className="mb-8 border-b border-gray-100 pb-5">
+        <BrandLogo to="/" size="sm" />
       </div>
 
       <nav className="space-y-1">

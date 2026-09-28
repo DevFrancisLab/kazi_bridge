@@ -3,6 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { signup, loginUser } from '@/lib/auth';
 import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/button';
+import BrandLogo from '@/components/BrandLogo';
 
 const SignupPage = () => {
   const [email, setEmail] = useState('');
@@ -119,6 +120,9 @@ const SignupPage = () => {
   return (
     <div className="min-h-screen flex items-center justify-center bg-slate-100 p-4">
       <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-lg">
+        <div className="mb-6 flex justify-center">
+          <BrandLogo to="/" size="lg" />
+        </div>
         <h1 className="mb-6 text-2xl font-bold text-slate-900">Create Account</h1>
 
   {error && <p className="mb-3 rounded-md bg-red-100 p-3 text-sm text-red-700">{error}</p>}

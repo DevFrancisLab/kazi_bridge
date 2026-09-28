@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 import { Briefcase, Clock, CheckCircle2, DollarSign } from "lucide-react";
 import { NavLink } from "react-router-dom";
+import BrandLogo from "@/components/BrandLogo";
 import { useState, useEffect } from "react";
 import { getJobs, getTasks, getEarnings } from "../lib/auth";
 import api from "@/lib/api";
@@ -101,7 +102,7 @@ export const DashboardSidebar = ({ isOpen, onClose }: { isOpen: boolean; onClose
       style={{ height: "100vh" }}
     >
       <div className="flex items-center justify-between mb-8">
-        <h1 className="text-2xl font-bold text-black dark:text-white">KaziBridge</h1>
+        <BrandLogo to="/" size="sm" wordmarkClassName="text-black dark:text-white" />
         <button
           onClick={onClose}
           className="rounded-lg bg-gray-100 p-2 text-gray-700 hover:bg-gray-200 md:hidden dark:bg-slate-800 dark:text-gray-100"
