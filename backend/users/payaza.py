@@ -317,6 +317,226 @@ def _enquiry_result(result):
     return result
 
 
+def _diagnostic_get(path):
+    """GET one Payaza path. This does not create a payout or write to the database."""
+    try:
+        public_key, secret_key, tenant_id = _configured_credentials()
+    except PayazaConfigurationError:
+        logger.error("Payaza configuration is incomplete")
+        return None, {
+            "error": "missing_configuration",
+            "message": "Payaza configuration is incomplete.",
+            "http_status": None,
+        }
+    secrets = [public_key, secret_key, payaza_authorization_value(public_key)]
+    del secret_key
+    url = f"{_payaza_base_url()}{path}"
+    headers = _transfer_headers(public_key, tenant_id)
+    logger.info("Payaza payout config method=GET url=%s", url)
+    try:
+        response = requests.get(url, headers=headers, timeout=REQUEST_TIMEOUT_SECONDS)
+    except requests.Timeout:
+        logger.error("Payaza payout config timed out url=%s", url)
+        return None, {
+            "error": "timeout",
+            "message": "Payaza request timed out.",
+            "http_status": None,
+        }
+    except requests.RequestException:
+        logger.error("Payaza payout config connection failed url=%s", url)
+        return None, {
+            "error": "payaza_unavailable",
+            "message": "Could not connect to Payaza.",
+            "http_status": None,
+        }
+    logger.info("Payaza payout config http_status=%s url=%s", response.status_code, url)
+    payload = _parse_json(response.text or "")
+    if payload is None:
+        return None, {
+            "error": "payaza_unavailable",
+            "message": "Payaza returned a non-JSON response.",
+            "http_status": response.status_code,
+        }
+    if response.status_code >= 400:
+        message = _safe_message(payload) or "Payaza rejected the request."
+        return None, {
+            "error": "payaza_rejected",
+            "message": _redact(message, secrets),
+            "http_status": response.status_code,
+        }
+    return payload, None
+
+
+def _text_field(item, *keys):
+    for key in keys:
+        value = item.get(key)
+        if isinstance(value, str) and value.strip():
+            return value.strip()
+    return None
+
+
+def _payout_account_from_enquiry(payload):
+    """Pick the KES main account. Do not invent a payazaAccountReference."""
+    accounts = []
+    for candidate in _find_account_lists(payload):
+        for item in candidate:
+            if isinstance(item, dict):
+                accounts.append(item)
+        if accounts:
+            break
+    if not accounts and isinstance(payload, dict):
+        data = payload.get("data")
+        if isinstance(data, dict) and (
+            "currency" in data or "payazaAccountReference" in data
+        ):
+            accounts.append(data)
+    kes_accounts = [
+        item for item in accounts
+        if str(_text_field(item, "currency", "currency_code", "currencyCode") or "").upper() == "KES"
+    ]
+    chosen = kes_accounts[0] if kes_accounts else None
+    if chosen is None:
+        return None, False
+    reference = chosen.get("payazaAccountReference")
+    if isinstance(reference, str) and reference.strip():
+        reference = reference.strip()
+    elif isinstance(reference, int) and not isinstance(reference, bool):
+        reference = str(reference)
+    else:
+        reference = None
+    summary = {}
+    currency = _text_field(chosen, "currency", "currency_code", "currencyCode")
+    country = _text_field(chosen, "country", "country_code", "countryCode")
+    status = _text_field(chosen, "status", "account_status")
+    name = _text_field(chosen, "accountName", "account_name", "name")
+    account_type = _text_field(chosen, "account_type", "type")
+    if currency:
+        summary["currency"] = currency
+    if country:
+        summary["country"] = country
+    if status:
+        summary["status"] = status
+    if name:
+        summary["account_name"] = name
+    if account_type:
+        summary["account_type"] = account_type
+    summary["payaza_account_reference"] = reference
+    return summary, reference is not None
+
+
+def _payout_bank_code_row(item):
+    if not isinstance(item, dict):
+        return None
+    code = _text_field(item, "code")
+    if not code:
+        return None
+    row = {"code": code}
+    name = _text_field(item, "name")
+    if name:
+        row["name"] = name
+    bank_type = _text_field(item, "type")
+    if bank_type:
+        row["type"] = bank_type
+    if isinstance(item.get("active"), bool):
+        row["active"] = item["active"]
+    currency = _text_field(item, "currency_code", "currency")
+    if currency:
+        row["currency_code"] = currency
+    country = _text_field(item, "country_code", "country")
+    if country:
+        row["country_code"] = country
+    return row
+
+
+def _readiness_flag(name):
+    return "configured" if _setting_text(name) else "missing"
+
+
+def payout_configuration_readiness():
+    """Report whether payout settings and Payment 1 are ready.
+
+    This reads local records only. It does not call Payaza or return secret values.
+    """
+    from .models import Payment, Payout, User
+
+    configuration = {
+        "kes_account_reference": _readiness_flag("PAYAZA_KES_ACCOUNT_REFERENCE"),
+        "payout_bank_code": _readiness_flag("PAYAZA_PAYOUT_BANK_CODE"),
+        "transaction_pin": _readiness_flag("PAYAZA_TRANSACTION_PIN"),
+        "sender_name": _readiness_flag("PAYAZA_SENDER_NAME"),
+        "sender_phone": _readiness_flag("PAYAZA_SENDER_PHONE"),
+        "sender_address": _readiness_flag("PAYAZA_SENDER_ADDRESS"),
+    }
+    freelancer_row = User.objects.filter(pk=14).only(
+        "first_name", "last_name", "phone_number"
+    ).first()
+    if freelancer_row is None:
+        freelancer = {
+            "id": 14,
+            "found": False,
+            "first_name": "missing",
+            "last_name": "missing",
+            "phone": "invalid",
+        }
+    else:
+        freelancer = {
+            "id": 14,
+            "found": True,
+            "first_name": "present" if str(freelancer_row.first_name or "").strip() else "missing",
+            "last_name": "present" if str(freelancer_row.last_name or "").strip() else "missing",
+            "phone": "valid" if kes_customer_number(freelancer_row.phone_number) else "invalid",
+        }
+    payment_row = Payment.objects.filter(pk=1).only("status").first()
+    return {
+        "configuration": configuration,
+        "freelancer": freelancer,
+        "payment": {
+            "id": 1,
+            "found": payment_row is not None,
+            "status": payment_row.status if payment_row else None,
+        },
+        "payout_count": Payout.objects.count(),
+    }
+
+
+def fetch_payout_config_diagnostic():
+    """Read payout readiness, the KES main account, and documented bank codes.
+
+    Account and bank-code calls are GET requests. This does not create a payout.
+    """
+    enquiry_payload, enquiry_error = _diagnostic_get(MAIN_ACCOUNT_ENQUIRY_PATH)
+    main_account = None
+    reference_available = False
+    if enquiry_payload is not None:
+        main_account, reference_available = _payout_account_from_enquiry(enquiry_payload)
+    bank_payload, bank_error = _diagnostic_get(PAYOUT_BANK_CODES_PATH.format(currency_code="KES"))
+    bank_codes = []
+    if isinstance(bank_payload, dict):
+        rows = bank_payload.get("data")
+        if isinstance(rows, list):
+            for item in rows:
+                row = _payout_bank_code_row(item)
+                if row:
+                    bank_codes.append(row)
+    result = {
+        "readiness": payout_configuration_readiness(),
+        "main_account": main_account,
+        "payaza_account_reference_available": reference_available,
+        "kes_payout_bank_codes": bank_codes,
+        "kes_payout_bank_code_endpoint": "verified",
+    }
+    if not reference_available:
+        result["payaza_account_reference_message"] = (
+            "payazaAccountReference was not returned."
+        )
+    if enquiry_error:
+        result["enquiry_error"] = enquiry_error
+    if bank_error:
+        result["bank_code_error"] = bank_error
+        result["kes_payout_bank_codes"] = []
+    return result
+
+
 def _redact_accounts(accounts, secrets):
     cleaned = []
     for account in accounts:
@@ -734,6 +954,9 @@ def collection_webhook_provider_reference(payload, local_reference):
     return None
 
 
+# Documented read-only transfer bank list:
+# GET /payaza-account/api/v1/mainaccounts/merchant/banks/{currency_code}
+PAYOUT_BANK_CODES_PATH = "/payaza-account/api/v1/mainaccounts/merchant/banks/{currency_code}"
 TRANSFER_PATH = "/payout-receptor/payout"
 TRANSFER_STATUS_PATH = "/payaza-account/api/v1/mainaccounts/transaction/status"
 KES_PAYOUT_COUNTRY = "KEN"
@@ -761,7 +984,12 @@ def _setting_text(name):
 
 
 def _payout_configuration():
-    """Return payout settings, or a list of missing names. Never return the PIN in errors."""
+    """Return payout settings, or a list of missing names. Never return the PIN in errors.
+
+    The KES account reference comes from PAYAZA_KES_ACCOUNT_REFERENCE.
+    The Safaricom code comes from PAYAZA_PAYOUT_BANK_CODE.
+    This does not call the main-account enquiry and does not invent a bank code.
+    """
     values = {
         "transaction_pin": _setting_text("PAYAZA_TRANSACTION_PIN"),
         "account_reference": _setting_text("PAYAZA_KES_ACCOUNT_REFERENCE"),
@@ -807,7 +1035,9 @@ def build_kes_payout_payload(payout):
     if "account_reference" in missing_config:
         return None, "missing_kes_account_reference", "Payaza KES account reference is not configured."
     if "bank_code" in missing_config:
-        return None, "missing_payout_bank_code", "Payaza payout bank code is not configured."
+        return None, "missing_payout_bank_code", (
+            "Payaza KES mobile-money payout bank code has not been configured."
+        )
     sender_missing = [name for name in missing_config if name.startswith("sender_")]
     if sender_missing:
         return None, "missing_payout_configuration", "Payaza sender details are not configured."

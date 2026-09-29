@@ -6,7 +6,12 @@ from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from .payaza import fetch_main_account_enquiry, fetch_main_accounts, fetch_main_accounts_requests
+from .payaza import (
+    fetch_main_account_enquiry,
+    fetch_main_accounts,
+    fetch_main_accounts_requests,
+    fetch_payout_config_diagnostic,
+)
 
 
 class PayazaTestConnectionView(APIView):
@@ -81,4 +86,30 @@ class PayazaTestAccountEnquiryView(APIView):
             status_code = 200
         else:
             status_code = 502
+        return Response(result, status=status_code)
+
+
+class PayazaTestPayoutConfigView(APIView):
+    """Read KES account reference and payout bank codes. Does not send money.
+
+    Available only while Django DEBUG is on. This does not create a payout.
+    """
+
+    authentication_classes = []
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        if not settings.DEBUG:
+            raise Http404("Payaza payout config check is only available in development.")
+        result = fetch_payout_config_diagnostic()
+        enquiry_error = result.get("enquiry_error") or {}
+        bank_error = result.get("bank_code_error") or {}
+        if enquiry_error.get("error") == "missing_configuration":
+            status_code = 503
+        elif enquiry_error.get("error") == "timeout" or bank_error.get("error") == "timeout":
+            status_code = 504
+        elif enquiry_error and bank_error:
+            status_code = 502
+        else:
+            status_code = 200
         return Response(result, status=status_code)

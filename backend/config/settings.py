@@ -212,7 +212,11 @@ PAYAZA_PRODUCT_ID = 'app'
 PAYAZA_API_BASE_URL = 'https://api.payaza.africa/live'
 # Payout secrets stay on the server. They are never returned by the API.
 PAYAZA_TRANSACTION_PIN = config('PAYAZA_TRANSACTION_PIN', default='')
+# Set in backend/.env. Payaza main-account enquiry returned payazaAccountReference
+# 5010154966 for the ACTIVE KES account. This setting is not hard-coded.
 PAYAZA_KES_ACCOUNT_REFERENCE = config('PAYAZA_KES_ACCOUNT_REFERENCE', default='')
+# Safaricom payout code confirmed for this corridor: SAFKEN.
+# The live value comes from backend/.env. It is not hard-coded into the payload.
 PAYAZA_PAYOUT_BANK_CODE = config('PAYAZA_PAYOUT_BANK_CODE', default='')
 PAYAZA_SENDER_NAME = config('PAYAZA_SENDER_NAME', default='')
 PAYAZA_SENDER_PHONE = config('PAYAZA_SENDER_PHONE', default='')

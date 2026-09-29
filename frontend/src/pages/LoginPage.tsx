@@ -41,7 +41,12 @@ const LoginPage = () => {
     
     console.log('Login successful, calling auth.login with:', { token: token.substring(0, 20) + '...', userRole, userEmail });
     
-    auth.login({ token, role: userRole, email: userEmail });
+    auth.login({
+      token,
+      role: userRole,
+      email: userEmail,
+      refresh: result.data?.refresh,
+    });
 
     // Verify token was stored
     const storedToken = localStorage.getItem('token');

@@ -35,7 +35,8 @@ const freelancerMenu: NavItem[] = [
 const Sidebar = () => {
   const navigate = useNavigate();
   const auth = useAuth();
-  const userEmail = auth.user?.email || auth.user?.name || 'Unknown User';
+  const savedName = [auth.user?.firstName, auth.user?.lastName].filter((part) => part?.trim()).join(' ');
+  const userEmail = savedName || auth.user?.email || auth.user?.name || 'Unknown User';
   const userRole = auth.user?.role || 'Unknown Role';
 
   // Get role from localStorage or auth context

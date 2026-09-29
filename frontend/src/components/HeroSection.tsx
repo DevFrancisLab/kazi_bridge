@@ -1,10 +1,7 @@
 import { useState, useEffect } from "react";
-import { Mic } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import heroBg from "@/assets/hero-bg.jpg";
 
 const HeroSection = () => {
-  const [query, setQuery] = useState("");
   const [displayedText, setDisplayedText] = useState("");
   const [showCursor, setShowCursor] = useState(true);
   const [isTypingComplete, setIsTypingComplete] = useState(false);
@@ -40,16 +37,6 @@ const HeroSection = () => {
     }
   }, [isTypingComplete]);
 
-  const handleSubmit = () => {
-    if (query.trim()) {
-      console.log("AI Query:", query);
-    }
-  };
-
-  const handleVoice = () => {
-    console.log("Voice input triggered (placeholder)");
-  };
-
   return (
     <section
       className="relative h-screen flex items-center"
@@ -78,28 +65,9 @@ const HeroSection = () => {
               </span>
             )}
           </h1>
-          <p className="max-w-2xl text-lg md:text-xl text-primary-foreground/80 mb-10 leading-relaxed">
-            KaziBridge connects global businesses with African talent and helps freelancers receive their earnings locally.
+          <p className="max-w-xl text-lg md:text-xl text-primary-foreground/90 leading-relaxed">
+            Global businesses hire African freelancers on KaziBridge. Freelancers receive their earnings in their own country.
           </p>
-
-          {/* AI Input */}
-          <div className="flex items-center gap-2 bg-background rounded-xl shadow-card-hover p-2 max-w-lg">
-            <input
-              type="text"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && handleSubmit()}
-              placeholder="Tell us your needs..."
-              className="flex-1 bg-transparent px-4 py-3 text-foreground placeholder:text-muted-foreground outline-none text-base"
-            />
-            <button
-              onClick={handleVoice}
-              className="p-2.5 rounded-lg text-muted-foreground hover:text-foreground transition-colors hover:bg-accent"
-              aria-label="Voice input"
-            >
-              <Mic className="w-5 h-5" />
-            </button>
-          </div>
         </div>
       </div>
     </section>

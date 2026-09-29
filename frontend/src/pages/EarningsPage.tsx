@@ -30,6 +30,50 @@ import {
 const actionButtonClass =
   "rounded-lg px-4 py-2 text-sm font-semibold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60";
 
+function destinationName(country: string): string {
+  if (country === "KE") return "Kenya";
+  return country;
+}
+
+function payoutMethodName(method: string): string {
+  if (method === "MOBILE_MONEY") return "Mobile Money";
+  if (method === "BANK_TRANSFER") return "Bank transfer";
+  return method;
+}
+
+function PayoutDestination({
+  country,
+  currency,
+  method,
+}: {
+  country: string;
+  currency: string;
+  method: string;
+}) {
+  return (
+    <dl className="grid grid-cols-2 gap-3 text-sm sm:grid-cols-4">
+      <div>
+        <dt className="text-gray-500 dark:text-gray-300">Destination</dt>
+        <dd className="font-medium text-gray-900 dark:text-white">{destinationName(country)}</dd>
+      </div>
+      <div>
+        <dt className="text-gray-500 dark:text-gray-300">Currency</dt>
+        <dd className="font-medium text-gray-900 dark:text-white">{currency}</dd>
+      </div>
+      <div>
+        <dt className="text-gray-500 dark:text-gray-300">Method</dt>
+        <dd className="font-medium text-gray-900 dark:text-white">{payoutMethodName(method)}</dd>
+      </div>
+      {country === "KE" && method === "MOBILE_MONEY" && (
+        <div>
+          <dt className="text-gray-500 dark:text-gray-300">Provider</dt>
+          <dd className="font-medium text-gray-900 dark:text-white">Safaricom</dd>
+        </div>
+      )}
+    </dl>
+  );
+}
+
 function EarningRow({
   earning,
   payment,
@@ -144,23 +188,34 @@ function EarningRow({
       </div>
 
       {canRequest && payment && (
-        <button
-          type="button"
-          disabled={busy}
-          onClick={() =>
-            run(() =>
-              createMutation.mutate(payment, {
-                onSettled: () => {
-                  inFlight.current = false;
-                },
-              }),
-            )
-          }
-          className={actionButtonClass}
-          style={{ backgroundColor: "#70e000" }}
-        >
-          {createMutation.isPending ? "Requesting payout..." : "Request payout"}
-        </button>
+        <div className="space-y-3">
+          <PayoutDestination country="KE" currency="KES" method="MOBILE_MONEY" />
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() =>
+              run(() =>
+                createMutation.mutate(payment, {
+                  onSettled: () => {
+                    inFlight.current = false;
+                  },
+                }),
+              )
+            }
+            className={actionButtonClass}
+            style={{ backgroundColor: "#70e000" }}
+          >
+            {createMutation.isPending ? "Requesting payout..." : "Request payout"}
+          </button>
+        </div>
+      )}
+
+      {displayed && !canRequest && (
+        <PayoutDestination
+          country={displayed.destination_country}
+          currency={displayed.destination_currency}
+          method={displayed.payout_method}
+        />
       )}
 
       {displayed?.status === "PAYOUT_PENDING" && (

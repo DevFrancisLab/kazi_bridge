@@ -188,6 +188,7 @@ export const DashboardTopbar = ({ onOpenSidebar }: { onOpenSidebar: () => void }
 export const DashboardContent = () => {
   const role = localStorage.getItem('role');
   const [jobs, setJobs] = useState<Job[]>([]);
+  const [jobsError, setJobsError] = useState<string | null>(null);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
   const [bids, setBids] = useState<Bid[]>([]);
@@ -215,6 +216,9 @@ export const DashboardContent = () => {
       const jobsResponse = await getJobs();
       if (jobsResponse.success) {
         setJobs(jobsResponse.data || []);
+        setJobsError(null);
+      } else {
+        setJobsError(jobsResponse.message || "Could not load your jobs.");
       }
     } catch (error) {
       console.error("Error refreshing client jobs:", error);
@@ -377,8 +381,16 @@ export const DashboardContent = () => {
       setJobDeadline("");
       setShowPostJobForm(false);
     } catch (error) {
-      const err = error as { response?: { data?: { message?: string } } };
-      setPostJobError(err.response?.data?.message || "Failed to post job.");
+      const data = (error as { response?: { data?: { message?: string; detail?: string } } }).response?.data;
+      const fieldError = data && typeof data === "object"
+        ? Object.values(data).flat().find((value) => typeof value === "string")
+        : undefined;
+      setPostJobError(
+        (typeof fieldError === "string" && fieldError) ||
+        data?.detail ||
+        data?.message ||
+        "Failed to post job. Sign in again if your session has expired."
+      );
     } finally {
       setPostJobLoading(false);
     }
@@ -588,7 +600,9 @@ export const DashboardContent = () => {
               </article>
             )) : (
               <div className="col-span-full text-center py-8">
-                <p className="text-gray-500 dark:text-gray-400">No jobs posted yet.</p>
+                <p className="text-gray-500 dark:text-gray-400">
+                  {jobsError || "No jobs posted yet."}
+                </p>
                 <button 
                   type="button"
                   onClick={() => setShowPostJobForm(true)}

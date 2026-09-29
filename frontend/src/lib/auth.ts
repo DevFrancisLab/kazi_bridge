@@ -115,8 +115,11 @@ export async function logoutUser(): Promise<ApiResponse> {
   }
 
   localStorage.removeItem('token');
+  localStorage.removeItem('refresh');
   localStorage.removeItem('role');
   localStorage.removeItem('email');
+  localStorage.removeItem('first_name');
+  localStorage.removeItem('last_name');
 
   return {
     success: true,
