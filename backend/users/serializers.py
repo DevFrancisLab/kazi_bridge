@@ -1,7 +1,9 @@
-from rest_framework import serializers
 from django.contrib.auth import get_user_model, authenticate
+from django.core.exceptions import ValidationError as DjangoValidationError
 from django.db import IntegrityError
-from .models import Job, Task, Earnings, Bid, Message
+from rest_framework import serializers
+
+from .models import Job, Task, Earnings, Bid, Message, Payment, Payout
 
 User = get_user_model()
 
@@ -373,3 +375,90 @@ class MessageCreateSerializer(serializers.ModelSerializer):
                 raise serializers.ValidationError("Invalid recipient for this job.")
         
         return data
+
+
+class PaymentSerializer(serializers.ModelSerializer):
+    """Read serializer for a payment. It never includes provider credentials."""
+
+    class Meta:
+        model = Payment
+        fields = (
+            'id',
+            'job',
+            'amount',
+            'currency',
+            'transaction_reference',
+            'provider_transaction_reference',
+            'status',
+            'created_at',
+            'updated_at',
+        )
+        read_only_fields = fields
+
+
+class PaymentStatusSerializer(serializers.ModelSerializer):
+    """Development status change. Payaza confirmation will replace this later."""
+
+    class Meta:
+        model = Payment
+        fields = ('status',)
+
+    def validate_status(self, value):
+        allowed = Payment.TRANSITIONS.get(self.instance.status, set())
+        if value not in allowed:
+            raise serializers.ValidationError(
+                f'Cannot change payment status from {self.instance.status} to {value}.'
+            )
+        return value
+
+    def update(self, instance, validated_data):
+        try:
+            instance.transition_to(validated_data['status'])
+        except DjangoValidationError as exc:
+            raise serializers.ValidationError(getattr(exc, 'message_dict', None) or exc.messages)
+        return instance
+
+
+class PayoutSerializer(serializers.ModelSerializer):
+    """Read serializer for a payout. Destination account details stay off the response."""
+
+    class Meta:
+        model = Payout
+        fields = (
+            'id',
+            'payment',
+            'amount',
+            'currency',
+            'destination_country',
+            'destination_currency',
+            'payout_method',
+            'transaction_reference',
+            'provider_transaction_reference',
+            'status',
+            'created_at',
+            'updated_at',
+        )
+        read_only_fields = fields
+
+
+class PayoutStatusSerializer(serializers.ModelSerializer):
+    """Development status change. Payaza confirmation will replace this later."""
+
+    class Meta:
+        model = Payout
+        fields = ('status',)
+
+    def validate_status(self, value):
+        allowed = Payout.TRANSITIONS.get(self.instance.status, set())
+        if value not in allowed:
+            raise serializers.ValidationError(
+                f'Cannot change payout status from {self.instance.status} to {value}.'
+            )
+        return value
+
+    def update(self, instance, validated_data):
+        try:
+            instance.transition_to(validated_data['status'])
+        except DjangoValidationError as exc:
+            raise serializers.ValidationError(getattr(exc, 'message_dict', None) or exc.messages)
+        return instance

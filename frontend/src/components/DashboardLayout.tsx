@@ -9,8 +9,20 @@ import { Briefcase, Clock, CheckCircle2, DollarSign } from "lucide-react";
 import { NavLink } from "react-router-dom";
 import BrandLogo from "@/components/BrandLogo";
 import { useState, useEffect } from "react";
-import { getJobs, getTasks, getEarnings } from "../lib/auth";
+import { useQuery } from "@tanstack/react-query";
+import { getJobs, getTasks } from "../lib/auth";
 import api from "@/lib/api";
+import { ProjectPaymentCard } from "@/components/PaymentSection";
+import {
+  earningsQueryKey,
+  fetchEarnings,
+  fetchPayments,
+  fetchPayouts,
+  formatSummaryAmount,
+  paymentQueryKey,
+  payoutQueryKey,
+  summarizeEarnings,
+} from "@/lib/api/payments";
 
 interface Job {
   id: number;
@@ -39,18 +51,6 @@ interface Task {
   status: string;
   created_at: string;
   updated_at: string;
-  job: Job;
-  freelancer: {
-    id: number;
-    email: string;
-    role: string;
-  };
-}
-
-interface Earnings {
-  id: number;
-  amount: number;
-  earned_at: string;
   job: Job;
   freelancer: {
     id: number;
@@ -189,7 +189,6 @@ export const DashboardContent = () => {
   const role = localStorage.getItem('role');
   const [jobs, setJobs] = useState<Job[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
-  const [earnings, setEarnings] = useState<Earnings[]>([]);
   const [loading, setLoading] = useState(true);
   const [bids, setBids] = useState<Bid[]>([]);
   const [bidsLoading, setBidsLoading] = useState(false);
@@ -229,15 +228,9 @@ export const DashboardContent = () => {
         if (role === 'CLIENT') {
           await fetchClientJobs();
         } else if (role === 'FREELANCER') {
-          const [tasksResponse, earningsResponse] = await Promise.all([
-            getTasks(),
-            getEarnings()
-          ]);
+          const tasksResponse = await getTasks();
           if (tasksResponse.success) {
             setTasks(tasksResponse.data || []);
-          }
-          if (earningsResponse.success) {
-            setEarnings(earningsResponse.data || []);
           }
         }
       } catch (error) {
@@ -286,15 +279,25 @@ export const DashboardContent = () => {
     }
   };
 
-  const handleJobClick = (jobId: number) => {
-    setSelectedJobId(jobId);
-    fetchBids(jobId);
-  };
-
   const handleBidAction = async (bidId: number, action: 'ACCEPTED' | 'REJECTED') => {
     try {
       await api.patch(`bids/${bidId}/`, { status: action });
       setBids((prev) => prev.map((bid) => bid.id === bidId ? { ...bid, status: action } : bid));
+      if (action === 'ACCEPTED') {
+        const acceptedBid = bids.find((bid) => bid.id === bidId);
+        setSelectedJobDetails((current) => {
+          if (!current) return current;
+          return {
+            ...current,
+            status: 'IN_PROGRESS',
+            freelancer: acceptedBid?.freelancer ?? current.freelancer,
+          };
+        });
+        if (selectedJobDetails) {
+          fetchJobMessages(selectedJobDetails.id);
+        }
+        fetchClientJobs();
+      }
     } catch (error) {
       setBidsError(`Failed to ${action.toLowerCase()} bid.`);
     }
@@ -305,7 +308,7 @@ export const DashboardContent = () => {
     if (job.status === 'OPEN') {
       await fetchBids(job.id);
     } else {
-      await fetchJobMessages(job.id);
+      await Promise.all([fetchBids(job.id), fetchJobMessages(job.id)]);
     }
   };
 
@@ -418,6 +421,34 @@ export const DashboardContent = () => {
     }
   };
 
+  const freelancerEarnings = useQuery({
+    queryKey: earningsQueryKey,
+    queryFn: fetchEarnings,
+    enabled: role === "FREELANCER",
+  });
+  const freelancerPayments = useQuery({
+    queryKey: paymentQueryKey,
+    queryFn: fetchPayments,
+    enabled: role === "FREELANCER",
+  });
+  const freelancerPayouts = useQuery({
+    queryKey: payoutQueryKey,
+    queryFn: fetchPayouts,
+    enabled: role === "FREELANCER",
+  });
+  const earningsSummary = summarizeEarnings(
+    freelancerEarnings.data ?? [],
+    freelancerPayments.data ?? [],
+    freelancerPayouts.data ?? [],
+  );
+  const earningsValue = (kind: "total" | "pending" | "paid") => {
+    if (freelancerEarnings.isPending) return "…";
+    if (freelancerEarnings.isError) return "Unavailable";
+    if (kind !== "total" && (freelancerPayments.isPending || freelancerPayouts.isPending)) return "…";
+    if (kind !== "total" && (freelancerPayments.isError || freelancerPayouts.isError)) return "Unavailable";
+    return formatSummaryAmount(earningsSummary, earningsSummary[kind]);
+  };
+
   if (loading) {
     return (
       <main className="space-y-6 p-4 md:p-6">
@@ -439,33 +470,54 @@ export const DashboardContent = () => {
     <main className="space-y-6 p-4 md:p-6">
       <section className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-700 dark:bg-slate-800">
         <h3 className="text-lg font-semibold text-black dark:text-white">Summary</h3>
-        <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {[
-            {
-              title: "Total Earnings",
-              value: "$18,720",
-              icon: DollarSign,
-              iconColor: "text-green-500",
-            },
-            {
-              title: "Active Jobs",
-              value: "12",
-              icon: Briefcase,
-              iconColor: "text-blue-500",
-            },
-            {
-              title: "Pending Payments",
-              value: "4",
-              icon: Clock,
-              iconColor: "text-amber-500",
-            },
-            {
-              title: "Workload Status",
-              value: "Busy",
-              icon: CheckCircle2,
-              iconColor: "text-indigo-500",
-            },
-          ].map((card) => {
+        <div className={`mt-4 grid gap-4 sm:grid-cols-2 ${role === "FREELANCER" ? "lg:grid-cols-3" : "lg:grid-cols-4"}`}>
+          {(role === "FREELANCER"
+            ? [
+                {
+                  title: "Total Earnings",
+                  value: earningsValue("total"),
+                  icon: DollarSign,
+                  iconColor: "text-green-500",
+                },
+                {
+                  title: "Pending",
+                  value: earningsValue("pending"),
+                  icon: Clock,
+                  iconColor: "text-amber-500",
+                },
+                {
+                  title: "Paid",
+                  value: earningsValue("paid"),
+                  icon: CheckCircle2,
+                  iconColor: "text-green-500",
+                },
+              ]
+            : [
+                {
+                  title: "Active Jobs",
+                  value: String(jobs.length),
+                  icon: Briefcase,
+                  iconColor: "text-blue-500",
+                },
+                {
+                  title: "In Progress",
+                  value: String(jobs.filter((job) => job.status === "IN_PROGRESS").length),
+                  icon: Clock,
+                  iconColor: "text-amber-500",
+                },
+                {
+                  title: "Open Jobs",
+                  value: String(jobs.filter((job) => job.status === "OPEN").length),
+                  icon: Briefcase,
+                  iconColor: "text-blue-500",
+                },
+                {
+                  title: "Completed",
+                  value: String(jobs.filter((job) => job.status === "COMPLETED").length),
+                  icon: CheckCircle2,
+                  iconColor: "text-green-500",
+                },
+              ]).map((card) => {
             const CardIcon = card.icon;
             return (
               <div
@@ -792,6 +844,21 @@ export const DashboardContent = () => {
                   <p className="text-sm text-slate-500 dark:text-gray-300">Freelancer: {selectedJobDetails.freelancer.email}</p>
                 )}
               </div>
+
+              {selectedJobDetails.status !== "OPEN" && (
+                <ProjectPaymentCard
+                  jobId={selectedJobDetails.id}
+                  projectName={selectedJobDetails.title}
+                  freelancerName={
+                    bids.find((bid) => bid.status === "ACCEPTED")?.freelancer.email ??
+                    selectedJobDetails.freelancer?.email ??
+                    "Freelancer"
+                  }
+                  previewAmount={
+                    bids.find((bid) => bid.status === "ACCEPTED")?.amount ?? selectedJobDetails.budget
+                  }
+                />
+              )}
 
               {/* Bids or Messages Section */}
               {selectedJobDetails.status === 'OPEN' ? (

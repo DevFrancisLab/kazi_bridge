@@ -23,27 +23,30 @@ const AUTH_TOKEN_KEY = 'token';
 const AUTH_ROLE_KEY = 'role';
 const AUTH_EMAIL_KEY = 'email';
 
+const readStoredAuth = () => {
+  const storedToken = localStorage.getItem(AUTH_TOKEN_KEY);
+  const storedRole = (localStorage.getItem(AUTH_ROLE_KEY) as UserRole) || '';
+  const storedEmail = localStorage.getItem(AUTH_EMAIL_KEY) || '';
+  if (!storedToken || !storedRole || !storedEmail) {
+    return { token: null, role: '' as UserRole, user: null as UserInfo | null };
+  }
+  return {
+    token: storedToken,
+    role: storedRole,
+    user: { email: storedEmail, role: storedRole } as UserInfo,
+  };
+};
+
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [token, setToken] = useState<string | null>(null);
-  const [role, setRole] = useState<UserRole>('');
-  const [user, setUser] = useState<UserInfo | null>(null);
+  const [token, setToken] = useState<string | null>(() => readStoredAuth().token);
+  const [role, setRole] = useState<UserRole>(() => readStoredAuth().role);
+  const [user, setUser] = useState<UserInfo | null>(() => readStoredAuth().user);
 
   useEffect(() => {
-    const storedToken = localStorage.getItem(AUTH_TOKEN_KEY);
-    const storedRole = (localStorage.getItem(AUTH_ROLE_KEY) as UserRole) || '';
-    const storedEmail = localStorage.getItem(AUTH_EMAIL_KEY) || '';
-
-    console.log("AuthContext useEffect - loading stored values:");
-    console.log("  storedToken:", storedToken ? "present" : "null");
-    console.log("  storedRole:", storedRole);
-    console.log("  storedEmail:", storedEmail);
-
-    if (storedToken && storedRole && storedEmail) {
-      setToken(storedToken);
-      setRole(storedRole);
-      setUser({ email: storedEmail, role: storedRole });
-      console.log("AuthContext initialized with stored credentials");
-    }
+    const stored = readStoredAuth();
+    setToken(stored.token);
+    setRole(stored.role);
+    setUser(stored.user);
   }, []);
 
   const login = (payload: { token: string; role: UserRole; email: string; name?: string }) => {

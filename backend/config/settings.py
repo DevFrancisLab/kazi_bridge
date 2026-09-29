@@ -202,3 +202,18 @@ LOGGING = {
 AT_USERNAME = config('AT_USERNAME', default='')
 AT_API_KEY = config('AT_API_KEY', default='')
 AT_SENDER_ID = config('AT_SENDER_ID', default='AFTKNG')
+
+# Payaza Test Mode. Read from the environment or backend/.env.
+# PAYAZA_SECRET_KEY is kept for later payment calls and is never sent to the frontend.
+PAYAZA_PUBLIC_KEY = config('PAYAZA_PUBLIC_KEY', default='')
+PAYAZA_SECRET_KEY = config('PAYAZA_SECRET_KEY', default='')
+PAYAZA_TENANT_ID = config('PAYAZA_TENANT_ID', default='test')
+PAYAZA_PRODUCT_ID = 'app'
+PAYAZA_API_BASE_URL = 'https://api.payaza.africa/live'
+# Payout secrets stay on the server. They are never returned by the API.
+PAYAZA_TRANSACTION_PIN = config('PAYAZA_TRANSACTION_PIN', default='')
+PAYAZA_KES_ACCOUNT_REFERENCE = config('PAYAZA_KES_ACCOUNT_REFERENCE', default='')
+PAYAZA_PAYOUT_BANK_CODE = config('PAYAZA_PAYOUT_BANK_CODE', default='')
+PAYAZA_SENDER_NAME = config('PAYAZA_SENDER_NAME', default='')
+PAYAZA_SENDER_PHONE = config('PAYAZA_SENDER_PHONE', default='')
+PAYAZA_SENDER_ADDRESS = config('PAYAZA_SENDER_ADDRESS', default='')
